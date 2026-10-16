@@ -33,24 +33,26 @@ Which are numeric, which are categorical/text/factor?
 Are there missing values?
 
 ```{r}
-# explore the types of the columns in jan_feb_flights
+str(jan_feb_flights)
+sum(is.na(jan_feb_flights))
 
 ```
 
 ```{r}
 # which columns are integer
-
+jan_feb_flights %>% select(where(is.integer))
 
 # which columns are double
-
+jan_feb_flights %>% select(where(is.double))
 
 # which columns are character
-
+jan_feb_flights %>% select(where(is.character))
 
 ```
 
 ```{r}
 # which columns contain NA's
+jan_feb_flights %>% filter_all(any_vars(is.na(.)))
 
 ```
 
@@ -64,7 +66,7 @@ Did the GenAI explanation (if used) help you? Which language model you explored?
 What was clear or unclear? Did it make any errors or skip anything important? Did you fact-check? Did you need to provide follow-up prompts or clarifications, or was the first response sufficient?
 
 _Your answer here_
-
+yes it helped. 
 ---
 
 # 2. Delays & Weather
@@ -73,43 +75,53 @@ _Your answer here_
 
 ## 2.1 Code
 
-```{r eval=FALSE} 
+```{r eval=TRUE} 
 ## REMEMBER TO SET eval=TRUE
 
 # join the datasets
 jan_feb_flights <- jan_feb_flights %>%
-  ____________(weather, by = c(______________________)) 
+  left_join(weather, by = c("origin","year","month","day","hour")) 
+
+jan_feb_flights
 ```
 
 ```{r}
 # is there a difference in wind speed when wind_gust is missing vs not missing?
 
-
+jan_feb_flights %>% filter(is.na(wind_gust)) %>% summarise(ms = mean(wind_speed,na.rm= TRUE))
+jan_feb_flights %>% filter(!is.na(wind_gust)) %>% summarise(ms = mean(wind_speed,na.rm= TRUE))
 
 ```
 
-Describe the difference in wind speed when wind_gust is missing vs not missing:
+Describe the difference in wind speed when wind_gust is missing vs not missing: 
 
-_Your answer here_
+roughly 10 units - so yes there is a difference
 
-```{r eval=FALSE} 
+
+```{r eval=TRUE} 
 ## REMEMBER TO SET eval=TRUE
 
 # create a new variable, gust_present
 jan_feb_flights <- jan_feb_flights %>%
-  mutate(gust_present = _______________)
+  mutate(gust_present = if_else(is.na(wind_gust), FALSE, TRUE))
+jan_feb_flights %>% select(dep_delay, gust_present)
+
 ```
 
 
 ```{r}
 # is there a relationship between gust_present and dep_delay?
 
+jan_feb_flights %>% filter(gust_present == TRUE) %>% summarise(meantrue = mean(dep_delay,na.rm= TRUE))
+jan_feb_flights %>% filter(gust_present == FALSE) %>% summarise(meanfalse = mean(dep_delay,na.rm= TRUE))
+
+
 
 ```
 
 Describe the relationship between gust_present and dep_delay you see (if any).
 
-_Your answer here_
+larger departure delay when there is wind present
 
 ## 2.1 Reflection
 
@@ -131,27 +143,28 @@ jfk_flights <- jan_feb_flights %>%
 ```
 
 
-```{r eval=FALSE} 
+```{r eval=TRUE} 
 ## REMEMBER TO SET eval=TRUE
 
 # Compute the sample mean
-mean_dep_delay <- jfk_flights %>% ________(mean_jfk = mean(dep_delay)) %>% pull(mean_jfk)
+mean_dep_delay <- jfk_flights %>% summarise(mean_jfk = mean(dep_delay)) %>% pull(mean_jfk)
 
 # Construct bootstrap distribution
 set.seed(99)  # for reproducibility
 boot_dist <- jfk_flights %>%
-  ________(response = _________) %>%
-  ________(reps = 1500, type = "bootstrap") %>%
-  ________(stat = _______)                 
+  specify(response = dep_delay) %>%
+  generate(reps = 1500, type = "bootstrap") %>%
+  calculate(stat = "mean")                 
 
 # Compute 95% confidence interval (percentile method)
-boot_dist %>% ...
+boot_dist %>% summarize(lower = quantile(stat, 0.025), upper = quantile(stat, 0.975))
+
 
 ```
 
 **Interpretation for the confidence interval**:
 
-_Your answer here_
+95% chance that mean will lie between range
 
 ## 3.2 Using base R
 
@@ -159,7 +172,7 @@ The following code achieves the same using base R and a for loop.
 Ask GenAI to explain how it works and discuss it with the group. Then find a tutor, and try to explain them what you did or didn't understand.
 
 
-```{r eval=FALSE} 
+```{r eval=TRUE} 
 ## REMEMBER TO SET eval=TRUE
 
 set.seed(99)
@@ -191,12 +204,12 @@ _Your answer here_
 
 **Goal:** For each airline, what are the mean and median arrival delays in Jan/Feb? Which is the worst on average?
 
-```{r eval=FALSE} 
+```{r eval=TRUE} 
 ## REMEMBER TO SET eval=TRUE
 
 # Join jan_feb_flights with airlines by carrier code
 jan_feb_flights <- jan_feb_flights %>%
-  ___________(airlines, by = "carrier")
+  left_join(airlines, by = "carrier")
 ```
 
 
@@ -204,6 +217,7 @@ jan_feb_flights <- jan_feb_flights %>%
 # Group by airline, summarize n, mean and median arrival delay
 # Arrange descending by mean delay
 
+jan_feb_flights %>% group_by(carrier) %>% summarise(mean = mean(arr_delay, na.rm = TRUE),median = median(arr_delay, na.rm = TRUE))
 
 
 
@@ -211,7 +225,7 @@ jan_feb_flights <- jan_feb_flights %>%
 
 **Which airline(s) had the highest mean? Is there anything notable about the worst airline?**
 
-_Your answer here_
+carrier OO is the worst as it has the largest mean delay.
 
 ## 4.1 Reflection
 
@@ -230,7 +244,13 @@ _Your answer here_
 - What are your thoughts on using GenAI as a *thinking partner* or *pair-programming navigator*, rather than a code-generator? Do you think IDS-sidekick is a good design based on your exploration so far? 
 - What is one insight or tip each of you learned today about using GenAI productively or spotting misleading AI-generated code?
 
-_Your answer here_
+- brain drain  
+- you don't learn 
+- they know what they are doing 
+- its good as it can aid us without doing all the work 
+- 
+
+
 
 ---
 
